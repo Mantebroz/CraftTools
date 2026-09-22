@@ -1,3 +1,4 @@
+-- Experimental: the game's custom movement API is missing from the supplied snapshot.
 -- Install as a LocalScript, or load this file from its raw GitHub URL.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -18,7 +19,7 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(1, 0)
 panel.Position = UDim2.new(1, -12, 0, 58)
-panel.Size = UDim2.fromOffset(178, 242)
+panel.Size = UDim2.fromOffset(178, 171)
 panel.BackgroundColor3 = Color3.fromRGB(24, 29, 32)
 panel.BorderSizePixel = 0
 panel.Parent = gui
@@ -88,34 +89,6 @@ local teleportEnabled = makeToggle("Teleport", 2)
 local infiniteJumpEnabled = makeToggle("Infinite jump", 3)
 local noclipEnabled = makeToggle("Noclip", 4)
 
-local addItemButton = Instance.new("TextButton")
-addItemButton.Name = "AddRandomItem"
-addItemButton.LayoutOrder = 5
-addItemButton.Size = UDim2.new(1, 0, 0, 42)
-addItemButton.BackgroundColor3 = Color3.fromRGB(117, 71, 51)
-addItemButton.BorderSizePixel = 0
-addItemButton.Font = Enum.Font.GothamMedium
-addItemButton.Text = "Add random item"
-addItemButton.TextColor3 = Color3.fromRGB(248, 241, 236)
-addItemButton.TextSize = 13
-addItemButton.Parent = panel
-
-local addItemCorner = Instance.new("UICorner")
-addItemCorner.CornerRadius = UDim.new(0, 6)
-addItemCorner.Parent = addItemButton
-
-local status = Instance.new("TextLabel")
-status.Name = "Status"
-status.LayoutOrder = 6
-status.Size = UDim2.new(1, 0, 0, 16)
-status.BackgroundTransparency = 1
-status.Font = Enum.Font.Gotham
-status.Text = "Local test items: 0"
-status.TextColor3 = Color3.fromRGB(183, 196, 194)
-status.TextSize = 11
-status.TextXAlignment = Enum.TextXAlignment.Left
-status.Parent = panel
-
 local originalCollision = {}
 local function restoreCollision()
 	for part, canCollide in pairs(originalCollision) do
@@ -143,42 +116,6 @@ local noclipConnection = RunService.Stepped:Connect(function()
 			part.CanCollide = false
 		end
 	end
-end)
-
-local random = Random.new()
-local itemChoices = {
-	{ name = "Ruby Block", color = Color3.fromRGB(215, 72, 77), shape = Enum.PartType.Block },
-	{ name = "Mint Orb", color = Color3.fromRGB(69, 190, 151), shape = Enum.PartType.Ball },
-	{ name = "Gold Block", color = Color3.fromRGB(232, 177, 56), shape = Enum.PartType.Block },
-	{ name = "Sky Orb", color = Color3.fromRGB(82, 161, 228), shape = Enum.PartType.Ball },
-}
-local addedCount = 0
-
-addItemButton.Activated:Connect(function()
-	local backpack = player:FindFirstChildOfClass("Backpack")
-	if not backpack then
-		status.Text = "Backpack unavailable"
-		return
-	end
-	local choice = itemChoices[random:NextInteger(1, #itemChoices)]
-	local tool = Instance.new("Tool")
-	tool.Name = choice.name
-	tool.ToolTip = "CraftTools local test item"
-	tool.CanBeDropped = false
-
-	local handle = Instance.new("Part")
-	handle.Name = "Handle"
-	handle.Size = Vector3.new(1, 1, 1)
-	handle.Shape = choice.shape
-	handle.Color = choice.color
-	handle.CanCollide = false
-	handle.CanTouch = false
-	handle.Massless = true
-	handle.Parent = tool
-	tool.Parent = backpack
-
-	addedCount += 1
-	status.Text = choice.name .. " (local) #" .. addedCount
 end)
 
 local activeInputs = {}
