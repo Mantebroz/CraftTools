@@ -1,30 +1,20 @@
 # CraftTools
 
-Development controls for a Roblox side-view game. This first version provides two mobile-friendly toggles:
+Herramientas de prueba para un juego Roblox con vista lateral. Esta version funciona solo en el cliente y muestra dos toggles para movil y escritorio:
 
-- **Teleport**: tap or click the scene to move to that X/Y position while keeping the character's current Z depth.
-- **Infinite jump**: use the game's normal jump control repeatedly while airborne.
+- **Teleport**: toca o haz clic en la escena. El personaje se mueve a esa posicion X/Y y conserva su profundidad Z.
+- **Infinite jump**: usa el control de salto del juego repetidamente, incluso en el aire.
 
-## Install
+## Cargar desde GitHub
 
-1. Put `ServerScriptService/CraftTools.server.luau` in your game's `ServerScriptService` as a **Script**.
-2. Put `StarterPlayer/StarterPlayerScripts/CraftTools.client.luau` in `StarterPlayerScripts` as a **LocalScript**.
-3. Add each collaborator's Roblox UserId to `allowedUserIds` in the server script. Studio playtests and the owner of a user-owned experience are allowed automatically. For group-owned experiences, add every developer explicitly.
-
-The server script creates `ReplicatedStorage.CraftToolsRemote`. The UI appears at the upper-right and works with touch or mouse. Taps that begin over existing UI or become a drag are ignored. Keep these tools restricted to developers; do not grant the remote to every player.
-
-## Load from GitHub
-
-If your environment supports `loadstring` and `game:HttpGet`, run:
+En un entorno que permita `loadstring` y `game:HttpGet`:
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Mantebroz/CraftTools/main/StarterPlayer/StarterPlayerScripts/CraftTools.client.luau"))()
 ```
 
-This loads the **client UI**, not UniversalSynSaveInstance. Without `CraftToolsRemote` from the server installation above, teleport and jump run locally. Client-only changes may be corrected by the game's movement or server code and cannot grant items or change server inventory. For a game you own, install both scripts in Studio for server-authorized behavior.
+Tambien puedes colocar `StarterPlayer/StarterPlayerScripts/CraftTools.client.luau` como **LocalScript** en `StarterPlayerScripts` de Roblox Studio. No se requiere ningun script ni remoto del servidor para mostrar la UI o intentar las dos acciones locales. La UI aparece arriba a la derecha. Ignora toques sobre otras interfaces y arrastres.
 
-## Place snapshot notes
+## Alcance de esta version
 
-The supplied `.rbxl` shows a thin `ParallaxPlane` aligned with X/Y and several character/world elements at different Z depths. Its saved client scripts, including `PlayerMovement`, `PlayerMovementControl`, `PlayerMovementHandler`, and `CameraHandler`, contain only decompilation errors. Server scripts are absent from that snapshot. This implementation therefore preserves each character's current Z instead of assuming one fixed depth. The existing movement code may still override the jump or teleport behavior; verify both in a Studio playtest of the actual project.
-
-Item collection is **not implemented yet**. The snapshot has inventory-related remotes and an `ItemsManager`, but no readable server handlers. A client-only “take” cannot be assumed to update the authoritative inventory. Add that feature only after inspecting the actual server item pickup API and its validation rules.
+El `.rbxl` de referencia muestra un plano visual X/Y y distintas profundidades Z, pero los scripts de movimiento guardados no son legibles. Por eso el teleport conserva la Z actual del personaje. Si el juego corrige la posicion o el movimiento desde el servidor, una accion local puede revertirse; hay que comprobarlo en el juego real. Recoger items no esta implementado: el snapshot no incluye los handlers del servidor ni permite verificar que un cambio de inventario hecho solo en cliente persista.

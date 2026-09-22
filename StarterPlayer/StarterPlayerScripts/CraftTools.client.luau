@@ -1,10 +1,8 @@
 -- Install as a LocalScript, or load this file from its raw GitHub URL.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-local remote = ReplicatedStorage:FindFirstChild("CraftToolsRemote")
 local playerGui = player:WaitForChild("PlayerGui")
 local previousGui = playerGui:FindFirstChild("CraftTools")
 if previousGui then previousGui:Destroy() end
@@ -119,28 +117,20 @@ UserInputService.InputEnded:Connect(function(input)
 	local distance = (root.Position.Z - ray.Origin.Z) / ray.Direction.Z
 	if distance <= 0 then return end
 	local point = ray.Origin + ray.Direction * distance
-	if remote and remote:IsA("RemoteEvent") then
-		remote:FireServer("teleport", Vector2.new(point.X, point.Y))
-	else
-		local destination = Vector3.new(point.X, point.Y, root.Position.Z)
-		character:PivotTo(character:GetPivot() + (destination - root.Position))
-		root.AssemblyLinearVelocity = Vector3.zero
-	end
+	local destination = Vector3.new(point.X, point.Y, root.Position.Z)
+	character:PivotTo(character:GetPivot() + (destination - root.Position))
+	root.AssemblyLinearVelocity = Vector3.zero
 end)
 
 UserInputService.JumpRequest:Connect(function()
 	if not gui.Parent or not infiniteJumpEnabled() then return end
-	if remote and remote:IsA("RemoteEvent") then
-		remote:FireServer("jump")
-	else
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if not root or not humanoid or humanoid.Health <= 0 then return end
-		local jumpSpeed = humanoid.UseJumpPower and humanoid.JumpPower
-			or math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight)
-		local velocity = root.AssemblyLinearVelocity
-		root.AssemblyLinearVelocity = Vector3.new(velocity.X, jumpSpeed, 0)
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 then return end
+	local jumpSpeed = humanoid.UseJumpPower and humanoid.JumpPower
+		or math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight)
+	local velocity = root.AssemblyLinearVelocity
+	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	root.AssemblyLinearVelocity = Vector3.new(velocity.X, jumpSpeed, 0)
 end)
