@@ -13,6 +13,16 @@ Development controls for a Roblox side-view game. This first version provides tw
 
 The server script creates `ReplicatedStorage.CraftToolsRemote`. The UI appears at the upper-right and works with touch or mouse. Taps that begin over existing UI or become a drag are ignored. Keep these tools restricted to developers; do not grant the remote to every player.
 
+## Load from GitHub
+
+If your environment supports `loadstring` and `game:HttpGet`, run:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Mantebroz/CraftTools/main/StarterPlayer/StarterPlayerScripts/CraftTools.client.luau"))()
+```
+
+This loads the **client UI**, not UniversalSynSaveInstance. Without `CraftToolsRemote` from the server installation above, teleport and jump run locally. Client-only changes may be corrected by the game's movement or server code and cannot grant items or change server inventory. For a game you own, install both scripts in Studio for server-authorized behavior.
+
 ## Place snapshot notes
 
 The supplied `.rbxl` shows a thin `ParallaxPlane` aligned with X/Y and several character/world elements at different Z depths. Its saved client scripts, including `PlayerMovement`, `PlayerMovementControl`, `PlayerMovementHandler`, and `CameraHandler`, contain only decompilation errors. Server scripts are absent from that snapshot. This implementation therefore preserves each character's current Z instead of assuming one fixed depth. The existing movement code may still override the jump or teleport behavior; verify both in a Studio playtest of the actual project.

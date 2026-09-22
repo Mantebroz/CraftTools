@@ -1,20 +1,19 @@
--- Install as a LocalScript in StarterPlayerScripts.
+-- Install as a LocalScript, or load this file from its raw GitHub URL.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-local remote = ReplicatedStorage:WaitForChild("CraftToolsRemote", 15)
-if not remote then
-	warn("CraftTools: install CraftTools.server.luau in ServerScriptService first")
-	return
-end
+local remote = ReplicatedStorage:FindFirstChild("CraftToolsRemote")
+local playerGui = player:WaitForChild("PlayerGui")
+local previousGui = playerGui:FindFirstChild("CraftTools")
+if previousGui then previousGui:Destroy() end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CraftTools"
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 20
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
@@ -96,7 +95,7 @@ local function isPointer(input)
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if isPointer(input) and not processed and teleportEnabled() then
+	if gui.Parent and isPointer(input) and not processed and teleportEnabled() then
 		activeInputs[input] = Vector2.new(input.Position.X, input.Position.Y)
 	end
 end)
@@ -104,7 +103,7 @@ end)
 UserInputService.InputEnded:Connect(function(input)
 	local start = activeInputs[input]
 	activeInputs[input] = nil
-	if not start or not teleportEnabled() then return end
+	if not gui.Parent or not start or not teleportEnabled() then return end
 
 	local finish = Vector2.new(input.Position.X, input.Position.Y)
 	if (finish - start).Magnitude > 16 then return end
@@ -120,11 +119,28 @@ UserInputService.InputEnded:Connect(function(input)
 	local distance = (root.Position.Z - ray.Origin.Z) / ray.Direction.Z
 	if distance <= 0 then return end
 	local point = ray.Origin + ray.Direction * distance
-	remote:FireServer("teleport", Vector2.new(point.X, point.Y))
+	if remote and remote:IsA("RemoteEvent") then
+		remote:FireServer("teleport", Vector2.new(point.X, point.Y))
+	else
+		local destination = Vector3.new(point.X, point.Y, root.Position.Z)
+		character:PivotTo(character:GetPivot() + (destination - root.Position))
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
 end)
 
 UserInputService.JumpRequest:Connect(function()
-	if infiniteJumpEnabled() then
+	if not gui.Parent or not infiniteJumpEnabled() then return end
+	if remote and remote:IsA("RemoteEvent") then
 		remote:FireServer("jump")
+	else
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not root or not humanoid or humanoid.Health <= 0 then return end
+		local jumpSpeed = humanoid.UseJumpPower and humanoid.JumpPower
+			or math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight)
+		local velocity = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(velocity.X, jumpSpeed, 0)
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
 end)
