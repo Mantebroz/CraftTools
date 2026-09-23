@@ -1,13 +1,13 @@
--- Experimental: the game's custom movement API is missing from the supplied snapshot.
--- Install as a LocalScript, or load this file from its raw GitHub URL.
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
 local previousGui = playerGui:FindFirstChild("CraftTools")
-if previousGui then previousGui:Destroy() end
+if previousGui then
+	previousGui:Destroy()
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CraftTools"
@@ -19,8 +19,8 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(1, 0)
 panel.Position = UDim2.new(1, -12, 0, 58)
-panel.Size = UDim2.fromOffset(178, 171)
-panel.BackgroundColor3 = Color3.fromRGB(24, 29, 32)
+panel.Size = UDim2.fromOffset(190, 84)
+panel.BackgroundColor3 = Color3.fromRGB(27, 31, 34)
 panel.BorderSizePixel = 0
 panel.Parent = gui
 
@@ -29,25 +29,14 @@ corner.CornerRadius = UDim.new(0, 8)
 corner.Parent = panel
 
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(75, 88, 91)
+stroke.Color = Color3.fromRGB(76, 88, 90)
 stroke.Thickness = 1
 stroke.Parent = panel
 
-local padding = Instance.new("UIPadding")
-padding.PaddingLeft = UDim.new(0, 8)
-padding.PaddingRight = UDim.new(0, 8)
-padding.PaddingTop = UDim.new(0, 7)
-padding.Parent = panel
-
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 5)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = panel
-
 local title = Instance.new("TextLabel")
 title.Name = "Title"
-title.LayoutOrder = 1
-title.Size = UDim2.new(1, 0, 0, 18)
+title.Position = UDim2.fromOffset(12, 8)
+title.Size = UDim2.new(1, -24, 0, 20)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.Text = "CraftTools"
@@ -56,118 +45,120 @@ title.TextSize = 14
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = panel
 
-local function makeToggle(name, order)
-	local button = Instance.new("TextButton")
-	button.Name = name .. "Toggle"
-	button.LayoutOrder = order
-	button.Size = UDim2.new(1, 0, 0, 42)
-	button.BorderSizePixel = 0
-	button.AutoButtonColor = false
-	button.Font = Enum.Font.GothamMedium
-	button.TextSize = 13
-	button.TextColor3 = Color3.fromRGB(238, 243, 242)
-	button.Parent = panel
+local toggle = Instance.new("TextButton")
+toggle.Name = "WallHackToggle"
+toggle.Position = UDim2.fromOffset(8, 35)
+toggle.Size = UDim2.new(1, -16, 0, 40)
+toggle.BackgroundColor3 = Color3.fromRGB(54, 62, 65)
+toggle.BorderSizePixel = 0
+toggle.AutoButtonColor = false
+toggle.Font = Enum.Font.GothamMedium
+toggle.Text = "Wall hack"
+toggle.TextColor3 = Color3.fromRGB(238, 243, 242)
+toggle.TextSize = 13
+toggle.TextXAlignment = Enum.TextXAlignment.Left
+toggle.Parent = panel
 
-	local buttonCorner = Instance.new("UICorner")
-	buttonCorner.CornerRadius = UDim.new(0, 6)
-	buttonCorner.Parent = button
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 6)
+toggleCorner.Parent = toggle
 
-	local enabled = false
-	local function render()
-		button.Text = name .. (enabled and "  ON" or "  OFF")
-		button.BackgroundColor3 = enabled and Color3.fromRGB(32, 121, 105) or Color3.fromRGB(58, 65, 68)
+local togglePadding = Instance.new("UIPadding")
+togglePadding.PaddingLeft = UDim.new(0, 10)
+togglePadding.Parent = toggle
+
+local switch = Instance.new("Frame")
+switch.Name = "Switch"
+switch.AnchorPoint = Vector2.new(1, 0.5)
+switch.Position = UDim2.new(1, -10, 0.5, 0)
+switch.Size = UDim2.fromOffset(38, 22)
+switch.BorderSizePixel = 0
+switch.Parent = toggle
+
+local switchCorner = Instance.new("UICorner")
+switchCorner.CornerRadius = UDim.new(1, 0)
+switchCorner.Parent = switch
+
+local knob = Instance.new("Frame")
+knob.Name = "Knob"
+knob.AnchorPoint = Vector2.new(0, 0.5)
+knob.Size = UDim2.fromOffset(16, 16)
+knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+knob.BorderSizePixel = 0
+knob.Parent = switch
+
+local knobCorner = Instance.new("UICorner")
+knobCorner.CornerRadius = UDim.new(1, 0)
+knobCorner.Parent = knob
+
+local enabled = false
+local aabbModule = nil
+local originalSweep = nil
+local patchedSweep = nil
+
+local function render()
+	toggle:SetAttribute("Enabled", enabled)
+	toggle.BackgroundColor3 = enabled and Color3.fromRGB(34, 94, 83) or Color3.fromRGB(54, 62, 65)
+	switch.BackgroundColor3 = enabled and Color3.fromRGB(54, 176, 139) or Color3.fromRGB(104, 115, 118)
+	knob.Position = enabled and UDim2.fromOffset(19, 11) or UDim2.fromOffset(3, 11)
+end
+
+local function stopWallHack()
+	enabled = false
+	if aabbModule and aabbModule.SweepAABB == patchedSweep then
+		aabbModule.SweepAABB = originalSweep
 	end
-	button.Activated:Connect(function()
-		enabled = not enabled
-		render()
-	end)
+	aabbModule = nil
+	originalSweep = nil
+	patchedSweep = nil
 	render()
-	return function() return enabled end
 end
 
-local teleportEnabled = makeToggle("Teleport", 2)
-local infiniteJumpEnabled = makeToggle("Infinite jump", 3)
-local noclipEnabled = makeToggle("Noclip", 4)
-
-local originalCollision = {}
-local function restoreCollision()
-	for part, canCollide in pairs(originalCollision) do
-		if part.Parent then part.CanCollide = canCollide end
-		originalCollision[part] = nil
-	end
-end
-
-local noclipConnection = RunService.Stepped:Connect(function()
-	if not gui.Parent then
-		restoreCollision()
+local function startWallHack()
+	local modules = ReplicatedStorage:FindFirstChild("Modules")
+	local aabbScript = modules and modules:FindFirstChild("AABB")
+	local playerScripts = player:FindFirstChild("PlayerScripts")
+	local movementScript = playerScripts and playerScripts:FindFirstChild("PlayerMovement")
+	if not aabbScript or not movementScript then
+		warn("CraftTools: AABB or PlayerMovement was not found")
 		return
 	end
-	if not noclipEnabled() then
-		restoreCollision()
+
+	local aabbOk, aabb = pcall(require, aabbScript)
+	local movementOk, movement = pcall(require, movementScript)
+	if not aabbOk or not movementOk or type(aabb) ~= "table" or type(aabb.SweepAABB) ~= "function"
+		or type(movement) ~= "table" or not movement.Hitbox then
+		warn("CraftTools: custom movement modules are not ready")
 		return
 	end
-	local tiles = workspace:FindFirstChild("Tiles")
-	if not tiles then return end
-	for _, part in tiles:GetDescendants() do
-		if part:IsA("BasePart") then
-			if originalCollision[part] == nil then
-				originalCollision[part] = part.CanCollide
-			end
-			part.CanCollide = false
+
+	aabbModule = aabb
+	originalSweep = aabb.SweepAABB
+	patchedSweep = function(position, size, tilePosition, tileSize, velocity)
+		local contactTime, normal = originalSweep(position, size, tilePosition, tileSize, velocity)
+
+		-- The game's movement handler calls this sweep for each 4.5-unit tile.
+		-- Keep upward-facing contacts so floors still support the player.
+		if enabled and position == movement.Position and size == movement.Hitbox.Size
+			and tileSize == Vector3.new(4.5, 4.5, 0) and normal and normal[2] ~= 1 then
+			return 1, nil
 		end
-	end
-end)
 
-local activeInputs = {}
-local function isPointer(input)
-	return input.UserInputType == Enum.UserInputType.Touch
-		or input.UserInputType == Enum.UserInputType.MouseButton1
+		return contactTime, normal
+	end
+
+	aabb.SweepAABB = patchedSweep
+	enabled = true
+	render()
 end
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if gui.Parent and isPointer(input) and not processed and teleportEnabled() then
-		activeInputs[input] = Vector2.new(input.Position.X, input.Position.Y)
+toggle.Activated:Connect(function()
+	if enabled then
+		stopWallHack()
+	else
+		startWallHack()
 	end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-	local start = activeInputs[input]
-	activeInputs[input] = nil
-	if not gui.Parent or not start or not teleportEnabled() then return end
-
-	local finish = Vector2.new(input.Position.X, input.Position.Y)
-	if (finish - start).Magnitude > 16 then return end
-
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local camera = workspace.CurrentCamera
-	if not root or not camera then return end
-
-	-- Intersect the touch ray with the player's current X/Y plane.
-	local ray = camera:ScreenPointToRay(finish.X, finish.Y)
-	if math.abs(ray.Direction.Z) < 0.001 then return end
-	local distance = (root.Position.Z - ray.Origin.Z) / ray.Direction.Z
-	if distance <= 0 then return end
-	local point = ray.Origin + ray.Direction * distance
-	local destination = Vector3.new(point.X, point.Y, root.Position.Z)
-	character:PivotTo(character:GetPivot() + (destination - root.Position))
-	root.AssemblyLinearVelocity = Vector3.zero
-end)
-
-UserInputService.JumpRequest:Connect(function()
-	if not gui.Parent or not infiniteJumpEnabled() then return end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not root or not humanoid or humanoid.Health <= 0 then return end
-	local jumpSpeed = humanoid.UseJumpPower and humanoid.JumpPower
-		or math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight)
-	local velocity = root.AssemblyLinearVelocity
-	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	root.AssemblyLinearVelocity = Vector3.new(velocity.X, jumpSpeed, 0)
-end)
-
-gui.Destroying:Connect(function()
-	noclipConnection:Disconnect()
-	restoreCollision()
-end)
+gui.Destroying:Connect(stopWallHack)
+render()
