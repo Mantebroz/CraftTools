@@ -4,7 +4,9 @@ Menu cliente para el movimiento 2D personalizado de Craft2. Por ahora contiene u
 
 - **Wall hack**: permite atravesar bloques de lado y hacia arriba. Conserva los choques que sostienen al jugador sobre el suelo y los limites del mundo que aplica `PlayerMovementHandler`.
 
-El toggle modifica temporalmente `ReplicatedStorage.Modules.AABB.SweepAABB` en el cliente y restaura la funcion original al apagarlo o destruir el menu. No cambia `CanCollide`, no modifica el inventario y no llama remotos de servidor.
+El toggle modifica temporalmente `ReplicatedStorage.Modules.AABB.SweepAABB` en el cliente. Si el entorno dispone de `getconnections`, tambien intenta suspender solo el listener de correccion `PlayerSetPosition` de `PlayerMovementHandler`. Restaura ambos cambios al apagarlo, destruir el menu o reaparecer. No cambia `CanCollide`, no modifica el inventario y no corta el envio normal de posicion por `PlayerMovementPackets`.
+
+La suspension del listener depende del entorno cliente y no anula las validaciones del servidor. Si no puede identificarse el listener, el wall hack de colisiones sigue activo y se emite un aviso en la consola.
 
 ## Cargar desde GitHub
 

@@ -95,6 +95,60 @@ local enabled = false
 local aabbModule = nil
 local originalSweep = nil
 local patchedSweep = nil
+local suspendedCorrections = {}
+
+local function resumeCorrections()
+	for connection in pairs(suspendedCorrections) do
+		pcall(function()
+			connection:Enable()
+		end)
+		suspendedCorrections[connection] = nil
+	end
+end
+
+local function suspendCorrections(handlerScript)
+	if type(getconnections) ~= "function" then
+		warn("CraftTools: this client cannot inspect PlayerSetPosition connections")
+		return
+	end
+
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	local remote = remotes and remotes:FindFirstChild("PlayerSetPosition")
+	if not remote then
+		warn("CraftTools: PlayerSetPosition was not found")
+		return
+	end
+
+	local found = false
+	local ok, connections = pcall(getconnections, remote.OnClientEvent)
+	if not ok or type(connections) ~= "table" then
+		warn("CraftTools: PlayerSetPosition connections could not be inspected")
+		return
+	end
+
+	for _, connection in ipairs(connections) do
+		local identified, belongsToHandler = pcall(function()
+			local callback = connection.Function
+			return type(callback) == "function" and getfenv(callback).script == handlerScript
+		end)
+		if identified and belongsToHandler then
+			found = true
+			local disabled = pcall(function()
+				if connection.Enabled ~= false then
+					connection:Disable()
+					suspendedCorrections[connection] = true
+				end
+			end)
+			if not disabled then
+				warn("CraftTools: PlayerSetPosition listener could not be disabled")
+			end
+		end
+	end
+
+	if not found then
+		warn("CraftTools: PlayerMovementHandler correction listener was not identified")
+	end
+end
 
 local function render()
 	toggle:SetAttribute("Enabled", enabled)
@@ -105,6 +159,7 @@ end
 
 local function stopWallHack()
 	enabled = false
+	resumeCorrections()
 	if aabbModule and aabbModule.SweepAABB == patchedSweep then
 		aabbModule.SweepAABB = originalSweep
 	end
@@ -119,6 +174,7 @@ local function startWallHack()
 	local aabbScript = modules and modules:FindFirstChild("AABB")
 	local playerScripts = player:FindFirstChild("PlayerScripts")
 	local movementScript = playerScripts and playerScripts:FindFirstChild("PlayerMovement")
+	local handlerScript = movementScript and movementScript:FindFirstChild("PlayerMovementHandler")
 	if not aabbScript or not movementScript then
 		warn("CraftTools: AABB or PlayerMovement was not found")
 		return
@@ -149,6 +205,9 @@ local function startWallHack()
 
 	aabb.SweepAABB = patchedSweep
 	enabled = true
+	if handlerScript then
+		suspendCorrections(handlerScript)
+	end
 	render()
 end
 
@@ -160,5 +219,13 @@ toggle.Activated:Connect(function()
 	end
 end)
 
-gui.Destroying:Connect(stopWallHack)
+local respawnConnection = player.CharacterAdded:Connect(function()
+	if enabled then
+		stopWallHack()
+	end
+end)
+gui.Destroying:Connect(function()
+	respawnConnection:Disconnect()
+	stopWallHack()
+end)
 render()
